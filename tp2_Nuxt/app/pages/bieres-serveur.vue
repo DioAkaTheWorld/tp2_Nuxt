@@ -10,7 +10,9 @@ const { data: bieres, pending, error } = await useFetch('https://api.sampleapis.
     <p v-else-if="error">Une erreur est survenue.</p>
     <ul v-else>
       <li v-for="biere in bieres" :key="biere.id">
-        <strong>{{ biere.name }}</strong> - {{ biere.price }}
+        <NuxtLink :to="`/bieres-serveur/${biere.id}`">
+          <strong>{{ biere.name }}</strong>
+        </NuxtLink> - {{ biere.price }}
       </li>
     </ul>
     <NuxtLink to="/">Retour à l'accueil</NuxtLink>

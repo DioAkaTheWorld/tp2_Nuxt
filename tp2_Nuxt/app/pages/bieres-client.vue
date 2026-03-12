@@ -6,22 +6,25 @@ const router = useRouter()
 
 const bieres = ref([])
 const priceMax = ref(route.query.pricemax || '')
+const typeBiere = ref(route.query.type || 'ale')
 
-onMounted(async () => {
+const chargerBieres = async () => {
   try {
-    const data = await $fetch('https://api.sampleapis.com/beers/ale')
+    bieres.value = []
+    const data = await $fetch(`https://api.sampleapis.com/beers/${typeBiere.value}`)
+
     bieres.value = data
   } catch (error) {
     console.error("Erreur lors de la récupération des bières :", error)
   }
+}
+
+onMounted(() => {
+  chargerBieres()
 })
 
-// 2. Création d'une liste filtrée réactive
 const bieresFiltrees = computed(() => {
-  if (!priceMax.value) {
-    return bieres.value
-  }
-
+  if (!priceMax.value) return bieres.value
   const max = parseFloat(priceMax.value)
 
   return bieres.value.filter(biere => {
@@ -31,8 +34,13 @@ const bieresFiltrees = computed(() => {
   })
 })
 
+watch(typeBiere, (nouveauType) => {
+  router.push({ query: { ...route.query, type: nouveauType } })
+  chargerBieres()
+})
+
 watch(priceMax, (nouvelleValeur) => {
-  router.push({ query: { pricemax: nouvelleValeur || undefined } })
+  router.push({ query: { ...route.query, pricemax: nouvelleValeur || undefined } })
 })
 </script>
 
@@ -41,23 +49,21 @@ watch(priceMax, (nouvelleValeur) => {
     <h1>Meilleures bières (Chargement Client)</h1>
 
     <div>
-      <label for="filtrePrix" style="font-weight: bold; margin-right: 10px;">
-        Prix maximum ($) :
-      </label>
-      <input
-          id="filtrePrix"
-          type="number"
-          v-model="priceMax"
-          placeholder="Ex: 15"
-          style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;"
-      />
+      <label for="typeBiere" style="margin-right: 10px;">Type :</label>
+      <select v-model="typeBiere" id="typeBiere" style="padding: 5px; margin-right: 20px; border-radius: 4px;">
+        <option value="ale">Ale</option>
+        <option value="stouts">Stouts</option>
+      </select>
+
+      <label for="filtrePrix" style="margin-right: 10px;">Prix max ($) :</label>
+      <input id="filtrePrix" type="number" v-model="priceMax" placeholder="Ex: 15" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;" />
     </div>
 
     <p v-if="bieres.length === 0">Chargement des bières en cours...</p>
 
     <ul v-else>
       <li v-for="biere in bieresFiltrees" :key="biere.id" style="margin-bottom: 10px;">
-        <NuxtLink :to="`/bieres-client/${biere.id}`" style="text-decoration: none; color: #007bff;">
+        <NuxtLink :to="`/bieres-client/${biere.id}?type=${typeBiere}`" style="text-decoration: none; color: #007bff;">
           <strong>{{ biere.name }}</strong>
         </NuxtLink>
         - {{ biere.price }}

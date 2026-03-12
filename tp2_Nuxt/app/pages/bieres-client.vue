@@ -5,6 +5,7 @@ const route = useRoute()
 const router = useRouter()
 
 const bieres = ref([])
+const favoris = ref([]) // Nouvelle variable pour nos favoris
 const typeBiere = ref(route.query.type || 'ale')
 const priceMax = ref(route.query.pricemax || '')
 const page = ref(Number(route.query.page) || 1)
@@ -22,7 +23,27 @@ const chargerBieres = async () => {
 
 onMounted(() => {
   chargerBieres()
+  const favorisSauvegardes = localStorage.getItem('mesFavoris')
+  if (favorisSauvegardes) {
+    favoris.value = JSON.parse(favorisSauvegardes)
+  }
 })
+
+const basculerFavori = (biere) => {
+  const index = favoris.value.findIndex(f => f.id === biere.id && f.type === typeBiere.value)
+
+  if (index === -1) {
+    favoris.value.push({ ...biere, type: typeBiere.value })
+  } else {
+    favoris.value.splice(index, 1)
+  }
+
+  localStorage.setItem('mesFavoris', JSON.stringify(favoris.value))
+}
+
+const estFavori = (id) => {
+  return favoris.value.some(f => f.id === id && f.type === typeBiere.value)
+}
 
 const bieresFiltrees = computed(() => {
   if (!priceMax.value) return bieres.value
@@ -59,13 +80,18 @@ watch(page, () => { mettreAJourURL() })
   <div style="padding: 20px;">
     <h1>Meilleures bières (Client)</h1>
 
-    <div style="margin-bottom: 20px; padding: 15px; border-radius: 8px;">
+    <div style="margin-bottom: 20px;">
+      <NuxtLink to="/favoris" style="padding: 10px 15px; background-color: yellow; color: black; text-decoration: none; border-radius: 5px; font-weight: bold;">
+        Voir mes favoris ({{ favoris.length }})
+      </NuxtLink>
+    </div>
+
+    <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
       <label>Type :</label>
       <select v-model="typeBiere" style="margin-right: 20px; padding: 5px;">
         <option value="ale">Ales</option>
         <option value="stouts">Stouts</option>
       </select>
-
       <label>Prix max ($) :</label>
       <input type="number" v-model="priceMax" placeholder="Ex: 15" style="padding: 5px;" />
     </div>
@@ -73,19 +99,24 @@ watch(page, () => { mettreAJourURL() })
     <p v-if="bieres.length === 0">Chargement depuis le navigateur...</p>
 
     <ul v-else-if="bieresAffichees.length > 0">
-      <li v-for="biere in bieresAffichees" :key="biere.id" style="margin-bottom: 10px;">
+      <li v-for="biere in bieresAffichees" :key="biere.id" style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+
+        <button @click="basculerFavori(biere)" style="cursor: pointer; padding: 5px; background: none; border: 1px solid #ccc; border-radius: 4px;">
+          {{ estFavori(biere.id) ? '⭐ Retirer' : '☆ Favori' }}
+        </button>
+
         <NuxtLink :to="`/bieres-client/${biere.id}?type=${typeBiere}`" style="color: #007bff; text-decoration: none;">
           <strong>{{ biere.name }}</strong>
         </NuxtLink> - {{ biere.price }}
       </li>
     </ul>
 
-    <p v-else>Aucune bière trouvée.</p>
+    <p v-else style="color: red;">Aucune bière trouvée.</p>
 
     <div v-if="totalPages > 1" style="margin-top: 20px; display: flex; gap: 10px; align-items: center;">
-      <button :disabled="page <= 1" @click="page--">Précédent</button>
+      <button :disabled="page <= 1" @click="page--" style="padding: 5px 15px;">⬅ Précédent</button>
       <span>Page {{ page }} sur {{ totalPages }}</span>
-      <button :disabled="page >= totalPages" @click="page++">Suivant</button>
+      <button :disabled="page >= totalPages" @click="page++" style="padding: 5px 15px;">Suivant ➡</button>
     </div>
 
     <div style="margin-top: 30px;">
